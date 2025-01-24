@@ -1,0 +1,25 @@
+# MAX_NUM: 20
+BATCH_SIZE: 256
+MODE_NAME: "CLIP"
+TASK: "itc"
+DATASET_DIR: "/mnt/shared/VL_CheckList"
+DATA: {
+  # 'Attribute/action': ['vaw', 'vg'],
+  # 'Attribute/state': ['vaw', 'vg'],
+  # 'Attribute/material': ['vaw', 'vg'],
+  # 'Attribute/size': ['vaw', 'vg'],
+  # 'Attribute/color': ['vaw', 'vg'],    
+
+  'Relation/action': ['swig', 'hake', 'vg'],
+  'Relation/spatial': ['vg'],
+
+  'Object/Size/medium': ['swig_agent', 'vg_subj', 'hake', 'swig_destination', 'swig_tool', 'swig_item', 'vg_obj'],
+  'Object/Size/large': ['swig_agent', 'vg_subj', 'hake', 'swig_destination', 'swig_tool', 'swig_item', 'vg_obj'],
+  'Object/Size/small': ['swig_agent', 'vg_subj', 'hake', 'swig_destination', 'swig_tool', 'swig_item', 'vg_obj'],
+  'Object/Location/margin': ['swig_agent', 'vg_subj', 'hake', 'swig_destination', 'swig_tool', 'swig_item', 'vg_obj'],
+  'Object/Location/center': ['swig_agent', 'vg_subj', 'hake', 'swig_destination', 'swig_tool', 'swig_item', 'vg_obj'],
+  'Object/Location/mid': ['swig_agent', 'vg_subj', 'hake', 'swig_destination', 'swig_tool', 'swig_item', 'vg_obj']
+}
+OUTPUT: 
+  DIR: "output/clip"
+  NUM: 2

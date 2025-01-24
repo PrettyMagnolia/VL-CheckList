@@ -1,14 +1,18 @@
 import yaml
 import os
 import json
-
+from PIL import Image
+from tqdm import tqdm
+import torch
 
 class DataLoader(object):
-    def __init__(self, corpus_names, type ,task='itm', version="v1") -> None:
+    def __init__(self, corpus_names, type, dataset_dir='', task='itm', version="v1", transform=None) -> None:
         self.root_dir = os.path.dirname(os.path.realpath(__file__))#.replace("/vl_checklist", "")
         self.cur_dir = os.path.realpath(os.curdir)
-
+        self.dataset_dir = dataset_dir
         self.version = version
+        self.transform = transform
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if task == 'itm':
             self.data = self.load_pos_and_neg_samples(corpus_names,type)
         elif task == 'itc':
@@ -24,7 +28,7 @@ class DataLoader(object):
             m = json.load(open(config["ANNO_PATH"]))
             for x in m:
                 path, texts_dict = x
-                path = os.path.join(config["IMG_ROOT"], path)
+                path = os.path.join(self.dataset_dir, config["IMG_ROOT"], path)
                 if os.path.exists(path):
                     corpus[corpus_name].append({
                         "path": path,
@@ -44,11 +48,12 @@ class DataLoader(object):
             corpus[corpus_name] = []
             config = yaml.load(open(os.path.join(self.cur_dir, 'corpus',  self.version, type,f'{corpus_name}.yaml'), 'r'), Loader=yaml.FullLoader)
             m = json.load(open(os.path.join(self.cur_dir,config["ANNO_PATH"])))
-            for x in m:
+            for x in tqdm(m):
                 path, texts_dict = x
-                path = os.path.join(config["IMG_ROOT"], path)
+                path = os.path.join(self.dataset_dir, config["IMG_ROOT"], path)
                 if os.path.exists(path):
                     corpus[corpus_name].append({
+                        "img": self.transform(Image.open(path)).to(self.device),
                         "path": path,
                         "texts_pos": texts_dict["POS"],
                         "texts_neg": texts_dict["NEG"]

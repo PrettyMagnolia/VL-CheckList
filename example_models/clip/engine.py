@@ -4,6 +4,7 @@ from example_models.utils.helpers import LRUCache, chunks
 import torch.cuda
 import clip
 from PIL import Image
+import numpy as np
 
 class CLIP(VLPModel):
     root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
@@ -15,6 +16,10 @@ class CLIP(VLPModel):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_dir = "resources"
         self.model_id = model_id
+
+        model_list = self._load_model(model_id)
+        self.model = model_list[0].eval()
+        self.preprocess = model_list[1]
 
     def model_name(self):
         return self.model_id
@@ -31,28 +36,16 @@ class CLIP(VLPModel):
     def _load_data(self, src_type, data):
         pass
 
-    def predict(self, model_id,
+    def predict(self,
                 images: list,
                 texts: list,
                 src_type: str = 'local'
                 ):
+        images_batch = images.to(self.device)
+        texts_batch = clip.tokenize(texts).to(self.device)
 
-        model_list = self._load_model(model_id)
-        model = model_list[0]
-        preprocess = model_list[1]
-        # process images by batch
-        probs = []
-        for i, chunk_i in enumerate(chunks(images, self.batch_size)):
-            for j in range(len(chunk_i)):
-                image = preprocess(Image.open(chunk_i[j])).unsqueeze(0).to(self.device)
-                # text format is [["there is a cat","there is a dog"],[...,...]...]
-                text = clip.tokenize(texts[j]).to(self.device)
+        with torch.no_grad():
+            logits_per_image, logits_per_text = self.model(images, texts_batch)
 
-                with torch.no_grad():
-                    logits_per_image, logits_per_text = model(image, text)
-                    probs.extend(logits_per_image.softmax(dim=-1).cpu().numpy())
-
-        return {"probs":probs}
-        
-
+        return torch.diagonal(logits_per_image).cpu().numpy().astype(np.float64)
 

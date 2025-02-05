@@ -5,33 +5,31 @@ import torch.cuda
 import clip
 from PIL import Image
 import numpy as np
+import open_clip
 
-class CLIP(VLPModel):
+class OPEN_CLIP(VLPModel):
     root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
     MAX_CACHE = 20
 
-    def __init__(self,model_id):
+    def __init__(self,model_id, model_path):
         self._models = LRUCache(self.MAX_CACHE)
         self.batch_size = 16
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_dir = "resources"
         self.model_id = model_id
+        self.model_path = model_path
 
-        model_list = self._load_model(model_id)
-        self.model = model_list[0].eval()
-        self.preprocess = model_list[1]
+        self.model, self.preprocess = self._load_model(model_id, model_path)
 
     def model_name(self):
         return self.model_id
 
-    def _load_model(self, model_id):
+    def _load_model(self, model_id, model_path):
         if model_id is None:
             raise Exception("Model ID cannot be None.")
     
-        if not self._models.has(model_id):
-            model, preprocess = clip.load(model_id, device=self.device)
-            self._models.put(model_id, [model, preprocess])
-        return self._models.get(model_id)
+        model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(model_id, pretrained=model_path, device=self.device)
+        return model.eval(), preprocess_val
 
     def _load_data(self, src_type, data):
         pass
@@ -45,7 +43,9 @@ class CLIP(VLPModel):
         texts_batch = clip.tokenize(texts).to(self.device)
 
         with torch.no_grad():
-            logits_per_image, logits_per_text = self.model(images_batch, texts_batch)
+            image_features, text_features, logit_scale = self.model(images_batch, texts_batch)
+        
+        similarity = image_features @ text_features.T * logit_scale
 
-        return torch.diagonal(logits_per_image).cpu().numpy().astype(np.float64)
+        return torch.diagonal(similarity).cpu().numpy().astype(np.float64)
 

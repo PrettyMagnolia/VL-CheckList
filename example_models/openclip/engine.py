@@ -34,16 +34,14 @@ class OPEN_CLIP(VLPModel):
     def _load_data(self, src_type, data):
         pass
 
-    def predict(self,
-                images: list,
-                texts: list,
-                src_type: str = 'local'
-                ):
+    def predict(self, images, texts, objects_sense, object_sense_format = None, src_type = 'local'):
         images_batch = images.to(self.device)
+        if object_sense_format:
+            objects_sense = objects_sense.to(self.device)
         texts_batch = clip.tokenize(texts).to(self.device)
 
         with torch.no_grad():
-            image_features, text_features, logit_scale = self.model(images_batch, texts_batch)
+            image_features, text_features, logit_scale = self.model(images_batch, texts_batch, objects_sense, object_sense_format)
         
         similarity = image_features @ text_features.T * logit_scale
 

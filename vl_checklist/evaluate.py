@@ -13,7 +13,7 @@ import torch
 
 
 class Evaluate(object):
-    def __init__(self, config_file, model) -> None:    
+    def __init__(self, config_file, model, objects_sense_format=None, objects_data=None) -> None:
         self.root_dir = os.path.dirname(os.path.realpath(__file__))    
         self.cur_dir = os.path.realpath(os.curdir)
         m = yaml.load(open(config_file, 'r'), Loader=yaml.FullLoader)
@@ -29,9 +29,10 @@ class Evaluate(object):
         # add 
         self.dataset_dir = m["DATASET_DIR"]
         self.data = m["DATA"]
+        self.objects_sense_format = objects_sense_format
+        self.objects_data = objects_data
 
-        
-   
+
     def start(self):
         # for data_type in self.types:            
         #     self.eval(data_type=data_type)
@@ -45,16 +46,17 @@ class Evaluate(object):
             sample_true = []
             sample_false = []
             num_t, num_f = 0, 0
-            dataset = ImageDataset(name, data_type, self.dataset_dir, self.task, transform=self.model.preprocess)
+            dataset = ImageDataset(name, data_type, self.dataset_dir, self.task, transform=self.model.preprocess, objects_sense_format=self.objects_sense_format, objects_data=self.objects_data)
             dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=64)
 
             for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc=f"Processing {name}"):
                 images = data["img"]
+                objects_sense = data["objects_sense"]
                 texts_pos = data["texts_pos"]
                 texts_neg = data["texts_neg"]
                 paths = data["path"]
-                result_pos = self.model.predict(images, texts_pos, src_type='local')
-                result_neg = self.model.predict(images, texts_neg, src_type='local')
+                result_pos = self.model.predict(images, texts_pos, objects_sense, self.objects_sense_format, src_type='local')
+                result_neg = self.model.predict(images, texts_neg, objects_sense, self.objects_sense_format, src_type='local')
                 for i, (pos, neg) in enumerate(zip(result_pos, result_neg)):
                     if pos > neg:
                         sample_true.append({
